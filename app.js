@@ -4,9 +4,9 @@ import {
   doc,
   onSnapshot,
   addDoc,
+  setDoc,
   deleteDoc,
   writeBatch,
-  serverTimestamp,
 } from "./firebase.js";
 const COL = {
   rates: "valores_niveis",
@@ -14,314 +14,438 @@ const COL = {
   launches: "lancamentos",
   services: "servicos",
 };
-const CAP_TYPE = "teto_mensal";
-const LEVEL_NAMES = { 1: "Nível 1", 2: "Nível 2", 3: "Nível 3", 4: "Nível 4" };
-const LEVELS = [1, 2, 3, 4];
-const SERVICE_CATALOG = [
-  { id: 1, name: "Ajuste de Arte", level: 1 },
-  { id: 2, name: "Ajuste em Arte Pronta", level: 1 },
-  { id: 3, name: "Ajuste em Fotos", level: 1 },
-  { id: 4, name: "Correção em Arte", level: 1 },
-  { id: 5, name: "Criação de Arte para Telegram", level: 3 },
-  { id: 6, name: "Criação de Arte para TV Corporativa", level: 3 },
-  { id: 7, name: "Criação de Adesivo Grande", level: 4 },
-  { id: 8, name: "Criação de Adesivo Pequeno", level: 2 },
-  { id: 9, name: "Criação de Arte para E-mail", level: 3 },
-  { id: 10, name: "Criação de Arte para Feira", level: 3 },
-  { id: 11, name: "Criação de Banner", level: 3 },
-  { id: 12, name: "Criação de Banner para Blog", level: 3 },
-  { id: 13, name: "Criação de Carta", level: 3 },
-  { id: 14, name: "Edição de Cartão de Visita", level: 2 },
-  { id: 15, name: "Criação de Convite", level: 3 },
-  { id: 16, name: "Criação de Flyer", level: 3 },
-  { id: 17, name: "Criação de Landing Page", level: 4 },
-  { id: 18, name: "Criação de Layout de Brindes", level: 3 },
-  { id: 19, name: "Criação de Logo", level: 3 },
-  { id: 20, name: "Criação de Outdoor", level: 3 },
-  { id: 21, name: "Criação de Story", level: 3 },
-  { id: 22, name: "Criação de Wallpaper", level: 3 },
-  { id: 23, name: "Criação de Post", level: 3 },
-  { id: 24, name: "Criação de Mockup", level: 4 },
-  { id: 25, name: "Diagramação por Página", level: 3 },
-  { id: 26, name: "Criação de Foto de Perfil", level: 3 },
-  { id: 27, name: "Montagem em Imagem", level: 3 },
-  { id: 28, name: "Criação de Formulário", level: 3 },
-  { id: 29, name: "Ajuste em Formulário", level: 2 },
-  { id: 30, name: "Criação de PDF Preenchível", level: 4 },
-  { id: 31, name: "Ajuste em PDF", level: 2 },
-  { id: 32, name: "Operação de OBS", level: 1 },
-  { id: 33, name: "Criação de Tabela no Excel", level: 1 },
-  { id: 34, name: "Post Telegram", level: 2 },
-  { id: 35, name: "Criação de Canal no Telegram", level: 1 },
-  { id: 36, name: "Fechamento de arquivo", level: 1 },
+const SERVICES_SEED = [
+  { id: "svc-1", name: "(1) Ajuste de Arte", level: 1 },
+  { id: "svc-2", name: "(2) Ajuste em Arte Pronta", level: 1 },
+  { id: "svc-3", name: "(3) Ajuste em Fotos", level: 1 },
+  { id: "svc-4", name: "(4) Correção em Arte", level: 1 },
+  { id: "svc-5", name: "(5) Criação de Arte para Telegram", level: 3 },
+  { id: "svc-6", name: "(6) Criação de Arte para TV Corporativa", level: 3 },
+  { id: "svc-7", name: "(7) Criação de Adesivo Grande", level: 4 },
+  { id: "svc-8", name: "(8) Criação de Adesivo Pequeno", level: 2 },
+  { id: "svc-9", name: "(9) Criação de Arte para E-mail", level: 3 },
+  { id: "svc-10", name: "(10) Criação de Arte para Feira", level: 3 },
+  { id: "svc-11", name: "(11) Criação de Banner", level: 3 },
+  { id: "svc-12", name: "(12) Criação de Banner para Blog", level: 3 },
+  { id: "svc-13", name: "(13) Criação de Carta", level: 3 },
+  { id: "svc-14", name: "(14) Edição de Cartão de Visita", level: 2 },
+  { id: "svc-15", name: "(15) Criação de Convite", level: 3 },
+  { id: "svc-16", name: "(16) Criação de Flyer", level: 3 },
+  { id: "svc-17", name: "(17) Criação de Landing Page", level: 4 },
+  { id: "svc-18", name: "(18) Criação de Layout de Brindes", level: 3 },
+  { id: "svc-19", name: "(19) Criação de Logo", level: 3 },
+  { id: "svc-20", name: "(20) Criação de Outdoor", level: 3 },
+  { id: "svc-21", name: "(21) Criação de Story", level: 3 },
+  { id: "svc-22", name: "(22) Criação de Wallpaper", level: 3 },
+  { id: "svc-23", name: "(23) Criação de Post", level: 3 },
+  { id: "svc-24", name: "(24) Criação de Mockup", level: 4 },
+  { id: "svc-25", name: "(25) Diagramação por Página", level: 3 },
+  { id: "svc-26", name: "(26) Criação de Foto de Perfil", level: 3 },
+  { id: "svc-27", name: "(27) Montagem em Imagem", level: 3 },
+  { id: "svc-28", name: "(28) Criação de Formulário", level: 3 },
+  { id: "svc-29", name: "(29) Ajuste em Formulário", level: 2 },
+  { id: "svc-30", name: "(30) Criação de PDF Preenchível", level: 4 },
+  { id: "svc-31", name: "(31) Ajuste em PDF", level: 2 },
+  { id: "svc-32", name: "(32) Operação de OBS", level: 1 },
+  { id: "svc-33", name: "(33) Criação de Tabela no Excel", level: 1 },
+  { id: "svc-34", name: "(34) Post Telegram", level: 2 },
+  { id: "svc-35", name: "(35) Criação de Canal no Telegram", level: 1 },
+  { id: "svc-36", name: "(36) Fechamento de arquivo", level: 1 },
   {
-    id: 37,
-    name: "Criação de Texto Curto (Telegram e Redes Sociais) ",
+    id: "svc-37",
+    name: "(37) Criação de Texto Curto (Telegram e Redes Sociais)",
     level: 2,
   },
   {
-    id: 38,
-    name: "Criação de Texto Médio (Apresentação de Produtos, Lançamentos)",
+    id: "svc-38",
+    name: "(38) Criação de Texto Médio (Apresentação de Produtos, Lançamentos)",
     level: 3,
   },
   {
-    id: 39,
-    name: "Criação de Texto Longo (Reportagens, Revistas e Redes sociais)",
+    id: "svc-39",
+    name: "(39) Criação de Texto Longo (Reportagens, Revistas e Redes sociais)",
     level: 4,
   },
-  { id: 40, name: "Gravação de Vídeo Simples", level: 2 },
-  { id: 41, name: "Gravação de Vídeo Complexo", level: 4 },
-  { id: 42, name: "Correção de Texto ", level: 2 },
-  { id: 43, name: "Edição de Vídeo Simples", level: 2 },
-  { id: 44, name: "Edição de Vídeo Complexa", level: 3 },
-  { id: 45, name: "Roteiro da Live da Semana", level: 4 },
-  { id: 46, name: "Ajuste de Arte para o Café com a Direção", level: 1 },
+  { id: "svc-40", name: "(40) Gravação de Vídeo Simples", level: 2 },
+  { id: "svc-41", name: "(41) Gravação de Vídeo Complexo", level: 4 },
+  { id: "svc-42", name: "(42) Correção de Texto", level: 2 },
+  { id: "svc-43", name: "(43) Edição de Vídeo Simples", level: 2 },
+  { id: "svc-44", name: "(44) Edição de Vídeo Complexa", level: 3 },
+  { id: "svc-45", name: "(45) Roteiro da Live da Semana", level: 4 },
   {
-    id: 47,
-    name: "Produção de Fotos de Colaboradores no Fundo Branco",
+    id: "svc-46",
+    name: "(46) Ajuste de Arte para o Café com a Direção",
+    level: 1,
+  },
+  {
+    id: "svc-47",
+    name: "(47) Produção de Fotos de Colaboradores no Fundo Branco",
     level: 2,
   },
   {
-    id: 48,
-    name: "Produção de Fotos de Colaboradores nos Cenários da Loja",
+    id: "svc-48",
+    name: "(48) Produção de Fotos de Colaboradores nos Cenários da Loja",
     level: 1,
   },
   {
-    id: 49,
-    name: "Produção de Fotos Externas (fora de União da Vitória)",
+    id: "svc-49",
+    name: "(49) Produção de Fotos Externas (fora de União da Vitória)",
     level: 4,
   },
-  { id: 50, name: "Criação de Roteiro para Vídeo e Áudio", level: 3 },
   {
-    id: 51,
-    name: "Gravação de Vídeo Externo (fora de União da Vitória)",
-    level: 4,
-  },
-  { id: 52, name: "Pormade na Mídia ", level: 1 },
-  { id: 53, name: "Criar Programação Rise Vision", level: 3 },
-  { id: 54, name: "Alteração de Arte no Rise Vision", level: 1 },
-  { id: 55, name: "Roteiro para Gravação de Áudio (Locução)", level: 2 },
-  {
-    id: 56,
-    name: "Montagem de Equipamentos para Gravação de Áudio no estúdio (Locução)",
-    level: 1,
-  },
-  { id: 57, name: "Gravação de Áudio (Locução)", level: 3 },
-  { id: 58, name: "Edição de Áudio (Locução) ", level: 3 },
-  { id: 59, name: "Teste de Áudio (Transmissão ao vivo)", level: 1 },
-  { id: 60, name: "Operação de Áudio (Transmissão ao vivo) ", level: 4 },
-  { id: 61, name: "Suporte Técnico (Auditório) ", level: 3 },
-  { id: 62, name: "Revisão e Manutenção de Áudio ", level: 2 },
-  { id: 63, name: "Captura de imagens (Foto)", level: 2 },
-  { id: 64, name: "INUTILIZAR", level: 1 },
-  { id: 65, name: "Captura de Imagens (Vídeo) ", level: 2 },
-  { id: 66, name: "Criação de Vídeo no After Effects", level: 4 },
-  { id: 67, name: "Animação de vídeo ", level: 4 },
-  { id: 68, name: "Criação de Imagens (Vídeo) ", level: 1 },
-  { id: 69, name: "Manutenção do Estúdio ", level: 2 },
-  { id: 70, name: "Organização do Estúdio (Transmissão ao vivo) ", level: 1 },
-  { id: 71, name: "Apresentação (Transmissão ao vivo) ", level: 1 },
-  { id: 72, name: "Apresentação (Integração) ", level: 1 },
-  { id: 73, name: "Apresentação (Gravação) ", level: 1 },
-  { id: 74, name: "Suporte Técnico (Transmissão ao vivo)", level: 4 },
-  {
-    id: 75,
-    name: "Revisão e Manutenção de Equipamentos do Estúdio ",
+    id: "svc-50",
+    name: "(50) Criação de Roteiro para Vídeo e Áudio",
     level: 3,
   },
-  { id: 76, name: "Configuração do OBS", level: 1 },
-  { id: 77, name: "Leitura de Comentários da Live", level: 1 },
-  { id: 78, name: "Impressões", level: 1 },
-  { id: 79, name: "Criação de Mapa", level: 1 },
-  { id: 80, name: "Edição do Mapa", level: 1 },
-  { id: 81, name: "Libras", level: 1 },
-  { id: 82, name: "Pagamento de Live", level: 1 },
-  { id: 83, name: "Sorteio da Live no Pátio", level: 1 },
-  { id: 84, name: "Criação de Slides", level: 3 },
-  { id: 85, name: "Manutenção de Slides", level: 2 },
-  { id: 86, name: "Criação de Arte para Formulário", level: 3 },
-  { id: 87, name: "Criação de arte complexa para apresentação", level: 4 },
-  { id: 88, name: "Criação arte para impressão em porta", level: 4 },
-  { id: 89, name: "Criação de arte para perfil corporativo", level: 3 },
-  { id: 90, name: "Criação de arte para capa do EAD", level: 1 },
-  { id: 91, name: "Criação de arte para veículos", level: 4 },
-  { id: 92, name: "Escaneamento em PDF", level: 1 },
-  { id: 93, name: "Criação de arte para redes sociais", level: 3 },
-  { id: 94, name: "Criação de arte para mapa", level: 1 },
-  { id: 95, name: "Criação de arte para apresentação", level: 3 },
-  { id: 96, name: "Edição de lona", level: 1 },
-  { id: 97, name: "Criação de QR Code", level: 1 },
   {
-    id: 98,
-    name: "Edição de QR Code (essa é para alterar o link quando o QR já está criado)",
-    level: 1,
+    id: "svc-51",
+    name: "(51) Gravação de Vídeo Externo (fora de União da Vitória)",
+    level: 4,
   },
-  { id: 99, name: "Criação de catálogo", level: 4 },
-  { id: 100, name: "Edição de catálogo", level: 2 },
-  { id: 101, name: "Correção de texto curto", level: 2 },
-  { id: 102, name: "Correção de texto longo", level: 4 },
-  { id: 103, name: "Criação de legenda curta", level: 2 },
-  { id: 104, name: "Criação de legenda média", level: 3 },
-  { id: 105, name: "Criação de legenda longa", level: 4 },
-  { id: 106, name: "Correção de legenda curta", level: 1 },
-  { id: 107, name: "Correção de legenda média", level: 2 },
-  { id: 108, name: "Correção de legenda longa", level: 3 },
-  { id: 109, name: "Inclusão Drive Pormade", level: 2 },
-  { id: 110, name: "Alteração Drive Pormade", level: 1 },
-  { id: 111, name: "Criação de Banner para Site", level: 3 },
-  { id: 112, name: "Criação de Banner para Site Mobile", level: 3 },
-  { id: 113, name: "Ajuste de Arte para Campanha Criteo", level: 2 },
-  { id: 114, name: "Criação de arte para copo", level: 3 },
-  { id: 115, name: "Criação de placa", level: 2 },
-  { id: 116, name: "Diagramação (lotes de 1 a 10 folhas)", level: 3 },
-  { id: 117, name: "Diagramação (lotes de 11 a 50 folhas)", level: 4 },
-  { id: 118, name: "Diagramação (lotes acima de 50 folhas)", level: 4 },
-  { id: 119, name: "Fechamento de arquivo (pequeno)", level: 2 },
-  { id: 120, name: "Fechamento de arquivo (grande)", level: 4 },
-  { id: 121, name: "Aniversariante do dia (lotes de 1 a 5)", level: 1 },
-  { id: 122, name: "Aniversariante do dia (lotes de 6 a 15)", level: 2 },
-  { id: 123, name: "Aniversariante do dia (lotes de 16 a 30)", level: 3 },
-  { id: 124, name: "Aniversariante do dia (lotes acima de 30)", level: 4 },
-  { id: 125, name: "Criação campanha promoção do mês", level: 4 },
-  { id: 126, name: "Ajuste campanha promoção do mês - google", level: 2 },
-  { id: 127, name: "Aniversariante de empresa (lotes de 16 a 30)", level: 3 },
-  { id: 128, name: "Aniversariante de empresa (lotes acima de 30)", level: 4 },
-  { id: 129, name: "Criação de thumbnail", level: 3 },
-  { id: 130, name: "Criação de capa para vídeo", level: 1 },
-  { id: 131, name: "Compartilhar link da live", level: 1 },
-  { id: 132, name: "Criação de circular", level: 3 },
-  { id: 133, name: "Criação de arte para PDF editável", level: 3 },
-  { id: 134, name: "Alteração de mockup", level: 3 },
-  { id: 135, name: "Criação de anúncio para revista", level: 4 },
-  { id: 136, name: "Criação de cartão", level: 3 },
-  { id: 137, name: "Upload de vídeo", level: 1 },
-  { id: 138, name: "Edição de imagem", level: 3 },
-  { id: 139, name: "Refação de vídeo", level: 1 },
+  { id: "svc-52", name: "(52) Pormade na Mídia", level: 1 },
+  { id: "svc-53", name: "(53) Criar Programação Rise Vision", level: 3 },
+  { id: "svc-54", name: "(54) Alteração de Arte no Rise Vision", level: 1 },
   {
-    id: 140,
-    name: "Ajuste campanha promoção do mês - redes sociais",
-    level: 2,
-  },
-  { id: 141, name: "Ajuste campanha promoção do mês - site", level: 2 },
-  { id: 142, name: "Criar link no youtube", level: 2 },
-  { id: 143, name: "Criação de crachá", level: 3 },
-  { id: 144, name: "Manutenção de crachá", level: 2 },
-  { id: 145, name: "Criação de ícone", level: 2 },
-  { id: 146, name: "Criação de arte para mini porta", level: 3 },
-  { id: 147, name: "Criação de arte para o rise vision", level: 3 },
-  { id: 148, name: "Criação de arte para camisas/camisetas", level: 4 },
-  { id: 149, name: "Impressão colorida", level: 1 },
-  { id: 150, name: "Alteração Caixa de Amostras", level: 3 },
-  { id: 151, name: "Foto de produto", level: 4 },
-  { id: 152, name: "Entrevista externa (Feiras, eventos)", level: 4 },
-  {
-    id: 153,
-    name: "Inclusão de dados agenda Pormade móvel (de 20 a 30)",
-    level: 1,
-  },
-  {
-    id: 154,
-    name: "Inclusão de dados agenda Pormade móvel (de 31 a 60)",
-    level: 1,
-  },
-  {
-    id: 155,
-    name: "Inclusão de dados agenda Pormade móvel (acima de 60)",
-    level: 1,
-  },
-  { id: 156, name: "Adaptação de post para storie", level: 2 },
-  { id: 157, name: "Remover fundo de imagens", level: 2 },
-  { id: 158, name: "Conversão de formato de arquivos de áudio", level: 1 },
-  { id: 159, name: "Inativar formulário", level: 2 },
-  { id: 160, name: "Criar formulário | ADVA", level: 2 },
-  { id: 161, name: "Criação de arte para slides", level: 2 },
-  { id: 162, name: "Criação de arte para evento", level: 3 },
-  { id: 163, name: "Criação de moldura (spin 360º)", level: 2 },
-  { id: 164, name: "Gravação de vídeo com a GoPro 360º", level: 3 },
-  { id: 165, name: "Edição de vídeo complexo com a GoPro 360º", level: 4 },
-  { id: 166, name: "Orçar compra de equipamentos", level: 1 },
-  { id: 167, name: "Orçar material gráfico", level: 1 },
-  { id: 168, name: "Correção de texto médio", level: 3 },
-  { id: 169, name: "Edição do Mapa (Entre 1 a 10)", level: 1 },
-  { id: 170, name: "Edição do Mapa (Entre 11 a 30)", level: 1 },
-  { id: 171, name: "Edição do Mapa (Acima de 30)", level: 1 },
-  { id: 172, name: "Criação de apresentação no Prezi", level: 1 },
-  { id: 173, name: "Produção de fotos | F2", level: 2 },
-  { id: 174, name: "Correção de roteiro", level: 3 },
-  { id: 175, name: "Gravação de vídeo | Média complexidade", level: 3 },
-  { id: 176, name: "Criação de roteiro | Vídeo complexo", level: 4 },
-  { id: 177, name: "Pergunta fácil/média | Papo com a Direção", level: 1 },
-  { id: 178, name: "Pergunta difícil | Papo com a Direção", level: 1 },
-  { id: 179, name: "Transmissão ao vivo", level: 1 },
-  { id: 180, name: "Sorteio ao vivo", level: 1 },
-  { id: 181, name: "Criação de certificado", level: 2 },
-  { id: 182, name: "Automatização de certificado no Jotform", level: 2 },
-  { id: 183, name: "Suporte Técnico (Evento Externo)", level: 4 },
-  { id: 184, name: "Edição de vídeo | Feira e eventos externos", level: 4 },
-  { id: 185, name: "Arte para porta | Linha HD", level: 4 },
-  { id: 186, name: "Criar FlipSnack", level: 3 },
-  { id: 187, name: "Link para PDF preenchível", level: 2 },
-  { id: 188, name: "Fotos em eventos", level: 3 },
-  { id: 189, name: "Vetorização de imagem", level: 3 },
-  { id: 190, name: "Criação de Identidade Visual", level: 4 },
-  { id: 191, name: "Automatização de arte no InDesign", level: 3 },
-  { id: 192, name: "Criação de app no JotForm", level: 4 },
-  {
-    id: 193,
-    name: "Edição de imagem (foto) para vídeo - Baixa complexidade",
-    level: 1,
-  },
-  {
-    id: 194,
-    name: "Edição de imagem (foto) para vídeo - Média complexidade",
+    id: "svc-55",
+    name: "(55) Roteiro para Gravação de Áudio (Locução)",
     level: 2,
   },
   {
-    id: 195,
-    name: "Edição de imagem (foto) para vídeo - Alta complexidade",
-    level: 3,
+    id: "svc-56",
+    name: "(56) Montagem de Equipamentos para Gravação de Áudio no estúdio (Locução)",
+    level: 1,
   },
-  { id: 196, name: "Cartaz à mão", level: 1 },
-  { id: 197, name: "Criação de arte para shaft", level: 3 },
-  { id: 198, name: "Ajuste de formulário + QR Code", level: 3 },
-  { id: 199, name: "Alteração complexa de formulário", level: 2 },
-  { id: 200, name: "Criação eventos Google Agenda", level: 1 },
+  { id: "svc-57", name: "(57) Gravação de Áudio (Locução)", level: 3 },
+  { id: "svc-58", name: "(58) Edição de Áudio (Locução)", level: 3 },
+  { id: "svc-59", name: "(59) Teste de Áudio (Transmissão ao vivo)", level: 1 },
   {
-    id: 201,
-    name: "Criação de convite para jurados | Festival da Canção",
-    level: 3,
+    id: "svc-60",
+    name: "(60) Operação de Áudio (Transmissão ao vivo)",
+    level: 4,
   },
+  { id: "svc-61", name: "(61) Suporte Técnico (Auditório)", level: 3 },
+  { id: "svc-62", name: "(62) Revisão e Manutenção de Áudio", level: 2 },
+  { id: "svc-63", name: "(63) Captura de imagens (Foto)", level: 2 },
+  { id: "svc-64", name: "(64) INUTILIZAR", level: 1 },
+  { id: "svc-65", name: "(65) Captura de Imagens (Vídeo)", level: 2 },
+  { id: "svc-66", name: "(66) Criação de Vídeo no After Effects", level: 4 },
+  { id: "svc-67", name: "(67) Animação de vídeo", level: 4 },
+  { id: "svc-68", name: "(68) Criação de Imagens (Vídeo)", level: 1 },
+  { id: "svc-69", name: "(69) Manutenção do Estúdio", level: 2 },
   {
-    id: 202,
-    name: "Organização do corpo de jurados | Festival da Canção",
+    id: "svc-70",
+    name: "(70) Organização do Estúdio (Transmissão ao vivo)",
+    level: 1,
+  },
+  { id: "svc-71", name: "(71) Apresentação (Transmissão ao vivo)", level: 1 },
+  { id: "svc-72", name: "(72) Apresentação (Integração)", level: 1 },
+  { id: "svc-73", name: "(73) Apresentação (Gravação)", level: 1 },
+  {
+    id: "svc-74",
+    name: "(74) Suporte Técnico (Transmissão ao vivo)",
     level: 4,
   },
   {
-    id: 203,
-    name: "Edição de músicas para o Festival da Canção | Alteração de tonalidade",
+    id: "svc-75",
+    name: "(75) Revisão e Manutenção de Equipamentos do Estúdio",
+    level: 3,
+  },
+  { id: "svc-76", name: "(76) Configuração do OBS", level: 1 },
+  { id: "svc-77", name: "(77) Leitura de Comentários da Live", level: 1 },
+  { id: "svc-78", name: "(78) Impressões", level: 1 },
+  { id: "svc-79", name: "(79) Criação de Mapa", level: 1 },
+  { id: "svc-80", name: "(80) Edição do Mapa", level: 1 },
+  { id: "svc-81", name: "(81) Libras", level: 1 },
+  { id: "svc-82", name: "(82) Pagamento de Live", level: 1 },
+  { id: "svc-83", name: "(83) Sorteio da Live no Pátio", level: 1 },
+  { id: "svc-84", name: "(84) Criação de Slides", level: 3 },
+  { id: "svc-85", name: "(85) Manutenção de Slides", level: 2 },
+  { id: "svc-86", name: "(86) Criação de Arte para Formulário", level: 3 },
+  {
+    id: "svc-87",
+    name: "(87) Criação de arte complexa para apresentação",
+    level: 4,
+  },
+  { id: "svc-88", name: "(88) Criação arte para impressão em porta", level: 4 },
+  {
+    id: "svc-89",
+    name: "(89) Criação de arte para perfil corporativo",
+    level: 3,
+  },
+  { id: "svc-90", name: "(90) Criação de arte para capa do EAD", level: 1 },
+  { id: "svc-91", name: "(91) Criação de arte para veículos", level: 4 },
+  { id: "svc-92", name: "(92) Escaneamento em PDF", level: 1 },
+  { id: "svc-93", name: "(93) Criação de arte para redes sociais", level: 3 },
+  { id: "svc-94", name: "(94) Criação de arte para mapa", level: 1 },
+  { id: "svc-95", name: "(95) Criação de arte para apresentação", level: 3 },
+  { id: "svc-96", name: "(96) Edição de lona", level: 1 },
+  { id: "svc-97", name: "(97) Criação de QR Code", level: 1 },
+  {
+    id: "svc-98",
+    name: "(98) Edição de QR Code (essa é para alterar o link quando o QR já está criado)",
+    level: 1,
+  },
+  { id: "svc-99", name: "(99) Criação de catálogo", level: 4 },
+  { id: "svc-100", name: "(100) Edição de catálogo", level: 2 },
+  { id: "svc-101", name: "(101) Correção de texto curto", level: 2 },
+  { id: "svc-102", name: "(102) Correção de texto longo", level: 4 },
+  { id: "svc-103", name: "(103) Criação de legenda curta", level: 2 },
+  { id: "svc-104", name: "(104) Criação de legenda média", level: 3 },
+  { id: "svc-105", name: "(105) Criação de legenda longa", level: 4 },
+  { id: "svc-106", name: "(106) Correção de legenda curta", level: 1 },
+  { id: "svc-107", name: "(107) Correção de legenda média", level: 2 },
+  { id: "svc-108", name: "(108) Correção de legenda longa", level: 3 },
+  { id: "svc-109", name: "(109) Inclusão Drive Pormade", level: 2 },
+  { id: "svc-110", name: "(110) Alteração Drive Pormade", level: 1 },
+  { id: "svc-111", name: "(111) Criação de Banner para Site", level: 3 },
+  { id: "svc-112", name: "(112) Criação de Banner para Site Mobile", level: 3 },
+  {
+    id: "svc-113",
+    name: "(113) Ajuste de Arte para Campanha Criteo",
+    level: 2,
+  },
+  { id: "svc-114", name: "(114) Criação de arte para copo", level: 3 },
+  { id: "svc-115", name: "(115) Criação de placa", level: 2 },
+  {
+    id: "svc-116",
+    name: "(116) Diagramação (lotes de 1 a 10 folhas)",
     level: 3,
   },
   {
-    id: 204,
+    id: "svc-117",
+    name: "(117) Diagramação (lotes de 11 a 50 folhas)",
+    level: 4,
+  },
+  {
+    id: "svc-118",
+    name: "(118) Diagramação (lotes acima de 50 folhas)",
+    level: 4,
+  },
+  { id: "svc-119", name: "(119) Fechamento de arquivo (pequeno)", level: 2 },
+  { id: "svc-120", name: "(120) Fechamento de arquivo (grande)", level: 4 },
+  {
+    id: "svc-121",
+    name: "(121) Aniversariante do dia (lotes de 1 a 5)",
+    level: 1,
+  },
+  {
+    id: "svc-122",
+    name: "(122) Aniversariante do dia (lotes de 6 a 15)",
+    level: 2,
+  },
+  {
+    id: "svc-123",
+    name: "(123) Aniversariante do dia (lotes de 16 a 30)",
+    level: 3,
+  },
+  {
+    id: "svc-124",
+    name: "(124) Aniversariante do dia (lotes acima de 30)",
+    level: 4,
+  },
+  { id: "svc-125", name: "(125) Criação campanha promoção do mês", level: 4 },
+  {
+    id: "svc-126",
+    name: "(126) Ajuste campanha promoção do mês - google",
+    level: 2,
+  },
+  {
+    id: "svc-127",
+    name: "(127) Aniversariante de empresa (lotes de 16 a 30)",
+    level: 3,
+  },
+  {
+    id: "svc-128",
+    name: "(128) Aniversariante de empresa (lotes acima de 30)",
+    level: 4,
+  },
+  { id: "svc-129", name: "(129) Criação de thumbnail", level: 3 },
+  { id: "svc-130", name: "(130) Criação de capa para vídeo", level: 1 },
+  { id: "svc-131", name: "(131) Compartilhar link da live", level: 1 },
+  { id: "svc-132", name: "(132) Criação de circular", level: 3 },
+  { id: "svc-133", name: "(133) Criação de arte para PDF editável", level: 3 },
+  { id: "svc-134", name: "(134) Alteração de mockup", level: 3 },
+  { id: "svc-135", name: "(135) Criação de anúncio para revista", level: 4 },
+  { id: "svc-136", name: "(136) Criação de cartão", level: 3 },
+  { id: "svc-137", name: "(137) Upload de vídeo", level: 1 },
+  { id: "svc-138", name: "(138) Edição de imagem", level: 3 },
+  { id: "svc-139", name: "(139) Refação de vídeo", level: 1 },
+  {
+    id: "svc-140",
+    name: "(140) Ajuste campanha promoção do mês - redes sociais",
+    level: 2,
+  },
+  {
+    id: "svc-141",
+    name: "(141) Ajuste campanha promoção do mês - site",
+    level: 2,
+  },
+  { id: "svc-142", name: "(142) Criar link no youtube", level: 2 },
+  { id: "svc-143", name: "(143) Criação de crachá", level: 3 },
+  { id: "svc-144", name: "(144) Manutenção de crachá", level: 2 },
+  { id: "svc-145", name: "(145) Criação de ícone", level: 2 },
+  { id: "svc-146", name: "(146) Criação de arte para mini porta", level: 3 },
+  { id: "svc-147", name: "(147) Criação de arte para o rise vision", level: 3 },
+  {
+    id: "svc-148",
+    name: "(148) Criação de arte para camisas/camisetas",
+    level: 4,
+  },
+  { id: "svc-149", name: "(149) Impressão colorida", level: 1 },
+  { id: "svc-150", name: "(150) Alteração Caixa de Amostras", level: 3 },
+  { id: "svc-151", name: "(151) Foto de produto", level: 4 },
+  {
+    id: "svc-152",
+    name: "(152) Entrevista externa (Feiras, eventos)",
+    level: 4,
+  },
+  {
+    id: "svc-153",
+    name: "(153) Inclusão de dados agenda Pormade móvel (de 20 a 30)",
+    level: 1,
+  },
+  {
+    id: "svc-154",
+    name: "(154) Inclusão de dados agenda Pormade móvel (de 31 a 60)",
+    level: 1,
+  },
+  {
+    id: "svc-155",
+    name: "(155) Inclusão de dados agenda Pormade móvel (acima de 60)",
+    level: 1,
+  },
+  { id: "svc-156", name: "(156) Adaptação de post para storie", level: 2 },
+  { id: "svc-157", name: "(157) Remover fundo de imagens", level: 2 },
+  {
+    id: "svc-158",
+    name: "(158) Conversão de formato de arquivos de áudio",
+    level: 1,
+  },
+  { id: "svc-159", name: "(159) Inativar formulário", level: 2 },
+  { id: "svc-160", name: "(160) Criar formulário | ADVA", level: 2 },
+  { id: "svc-161", name: "(161) Criação de arte para slides", level: 2 },
+  { id: "svc-162", name: "(162) Criação de arte para evento", level: 3 },
+  { id: "svc-163", name: "(163) Criação de moldura (spin 360º)", level: 2 },
+  { id: "svc-164", name: "(164) Gravação de vídeo com a GoPro 360º", level: 3 },
+  {
+    id: "svc-165",
+    name: "(165) Edição de vídeo complexo com a GoPro 360º",
+    level: 4,
+  },
+  { id: "svc-166", name: "(166) Orçar compra de equipamentos", level: 1 },
+  { id: "svc-167", name: "(167) Orçar material gráfico", level: 1 },
+  { id: "svc-168", name: "(168) Correção de texto médio", level: 3 },
+  { id: "svc-169", name: "(169) Edição do Mapa (Entre 1 a 10)", level: 1 },
+  { id: "svc-170", name: "(170) Edição do Mapa (Entre 11 a 30)", level: 1 },
+  { id: "svc-171", name: "(171) Edição do Mapa (Acima de 30)", level: 1 },
+  { id: "svc-172", name: "(172) Criação de apresentação no Prezi", level: 1 },
+  { id: "svc-173", name: "(173) Produção de fotos | F2", level: 2 },
+  { id: "svc-174", name: "(174) Correção de roteiro", level: 3 },
+  {
+    id: "svc-175",
+    name: "(175) Gravação de vídeo | Média complexidade",
+    level: 3,
+  },
+  {
+    id: "svc-176",
+    name: "(176) Criação de roteiro | Vídeo complexo",
+    level: 4,
+  },
+  {
+    id: "svc-177",
+    name: "(177) Pergunta fácil/média | Papo com a Direção",
+    level: 1,
+  },
+  {
+    id: "svc-178",
+    name: "(178) Pergunta difícil | Papo com a Direção",
+    level: 1,
+  },
+  { id: "svc-179", name: "(179) Transmissão ao vivo", level: 1 },
+  { id: "svc-180", name: "(180) Sorteio ao vivo", level: 1 },
+  { id: "svc-181", name: "(181) Criação de certificado", level: 2 },
+  {
+    id: "svc-182",
+    name: "(182) Automatização de certificado no Jotform",
+    level: 2,
+  },
+  { id: "svc-183", name: "(183) Suporte Técnico (Evento Externo)", level: 4 },
+  {
+    id: "svc-184",
+    name: "(184) Edição de vídeo | Feira e eventos externos",
+    level: 4,
+  },
+  { id: "svc-185", name: "(185) Arte para porta | Linha HD", level: 4 },
+  { id: "svc-186", name: "(186) Criar FlipSnack", level: 3 },
+  { id: "svc-187", name: "(187) Link para PDF preenchível", level: 2 },
+  { id: "svc-188", name: "(188) Fotos em eventos", level: 3 },
+  { id: "svc-189", name: "(189) Vetorização de imagem", level: 3 },
+  { id: "svc-190", name: "(190) Criação de Identidade Visual", level: 4 },
+  { id: "svc-191", name: "(191) Automatização de arte no InDesign", level: 3 },
+  { id: "svc-192", name: "(192) Criação de app no JotForm", level: 4 },
+  {
+    id: "svc-193",
+    name: "(193) Edição de imagem (foto) para vídeo - Baixa complexidade",
+    level: 1,
+  },
+  {
+    id: "svc-194",
+    name: "(194) Edição de imagem (foto) para vídeo - Média complexidade",
+    level: 2,
+  },
+  {
+    id: "svc-195",
+    name: "(195) Edição de imagem (foto) para vídeo - Alta complexidade",
+    level: 3,
+  },
+  { id: "svc-196", name: "(196) Cartaz à mão", level: 1 },
+  { id: "svc-197", name: "(197) Criação de arte para shaft", level: 3 },
+  { id: "svc-198", name: "(198) Ajuste de formulário + QR Code", level: 3 },
+  { id: "svc-199", name: "(199) Alteração complexa de formulário", level: 2 },
+  { id: "svc-200", name: "(200) Criação eventos Google Agenda", level: 1 },
+  {
+    id: "svc-201",
+    name: "(201) Criação de convite para jurados | Festival da Canção",
+    level: 3,
+  },
+  {
+    id: "svc-202",
+    name: "(202) Organização do corpo de jurados | Festival da Canção",
+    level: 4,
+  },
+  {
+    id: "svc-203",
+    name: "(203) Edição de músicas para o Festival da Canção | Alteração de tonalidade",
+    level: 3,
+  },
+  {
+    id: "svc-204",
     name: "Organização dos participantes | Festival da Canção",
     level: 1,
   },
-  { id: 205, name: "Organização da banda | Festival da Canção", level: 4 },
   {
-    id: 206,
-    name: "Criação e edição das cédulas de votação para os jurados do Festival da Canção",
+    id: "svc-205",
+    name: "Organização da banda | Festival da Canção",
+    level: 4,
+  },
+  {
+    id: "svc-206",
+    name: "(206) Criação e edição das cédulas de votação para os jurados do Festival da Canção",
     level: 1,
   },
-  { id: 207, name: "Foto profissional no estúdio", level: 4 },
-  { id: 208, name: "Arte botão Stream Ddeck", level: 1 },
-  { id: 209, name: "Arte personalização de Convenção", level: 2 },
-  { id: 210, name: "Produção de vídeo", level: 4 },
-  { id: 211, name: "Marcar entrevista e acompanhamento", level: 4 },
-  { id: 212, name: "Criação de adesivo médio", level: 3 },
-  { id: 213, name: "Modelagem 3D", level: 4 },
-  { id: 214, name: "Texturização 3D", level: 4 },
-  { id: 215, name: "Renderização 3D", level: 4 },
+  { id: "svc-207", name: "Foto profissional no estúdio", level: 4 },
+  { id: "svc-208", name: "Arte botão Stream Ddeck", level: 1 },
+  { id: "svc-209", name: "Arte personalização de Convenção", level: 2 },
+  { id: "svc-210", name: "(210) Produção de vídeo", level: 4 },
+  { id: "svc-211", name: "(211) Marcar entrevista e acompanhamento", level: 4 },
+  { id: "svc-212", name: "Criação de adesivo médio", level: 3 },
+  { id: "svc-213", name: "Modelagem 3D", level: 4 },
+  { id: "svc-214", name: "Texturização 3D", level: 4 },
+  { id: "svc-215", name: "Renderização 3D", level: 4 },
 ];
+const CAP_TYPE = "teto_mensal";
+const LEVEL_NAMES = { 1: "Nível 1", 2: "Nível 2", 3: "Nível 3", 4: "Nível 4" };
+const LEVELS = [1, 2, 3, 4];
 const today = () => {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -369,13 +493,7 @@ const loaded = { rates: false, caps: false, launches: false, services: false },
   seeding = {};
 let syncError = false;
 const isReady = () =>
-  loaded.rates &&
-  loaded.caps &&
-  loaded.launches &&
-  loaded.services &&
-  state.rates.length > 0 &&
-  state.caps.length > 0 &&
-  state.services.length > 0;
+  loaded.rates && loaded.caps && loaded.launches && loaded.services;
 const fail = (err) => {
   console.error(err);
   notify(
@@ -393,6 +511,10 @@ const capFromDoc = (d) => {
   const x = d.data();
   return { id: d.id, value: x.valor, startDate: x.inicio };
 };
+const serviceFromDoc = (d) => {
+  const x = d.data();
+  return { id: d.id, name: x.nome, level: x.nivel };
+};
 const launchFromDoc = (d) => {
   const x = d.data();
   return {
@@ -406,35 +528,11 @@ const launchFromDoc = (d) => {
     serviceName: x.servico_nome || null,
   };
 };
-const serviceFromDoc = (d) => {
-  const x = d.data();
-  return {
-    id: d.id,
-    serviceId: x.id,
-    nome: x.nome,
-    nivel: x.nivel,
-    ativo: x.ativo !== false,
-  };
-};
-const serviceAtId = (id) =>
-  state.services.find(
-    (s) => String(s.serviceId) === String(id) && s.ativo !== false,
-  );
 let selectedMonth = monthKey(new Date());
-let registerMode = "level";
 let settingsTab = "rates";
+let registerMode = "nivel";
+let servicesFilter = "";
 const $ = (id) => document.getElementById(id);
-function syncServiceOptions() {
-  const select = $("service");
-  if (!select) return;
-  const previous = select.value;
-  const services = state.services
-    .filter((s) => s.ativo !== false)
-    .sort((a, b) => a.serviceId - b.serviceId);
-  select.innerHTML = `<option value="">Selecione um serviço…</option>${services.map((s) => `<option value="${s.serviceId}">(${s.serviceId}) ${s.nome}</option>`).join("")}`;
-  if (services.some((s) => String(s.serviceId) === previous))
-    select.value = previous;
-}
 const rateAt = (level, date) =>
   state.rates
     .filter((r) => r.level === level && r.startDate <= date)
@@ -449,11 +547,20 @@ const notify = (message, tone = "success") => {
   el.className = `toast ${tone === "error" ? "error" : ""}`;
   setTimeout(() => el.classList.add("hidden"), 3000);
 };
+const norm = (s) => (s || "").trim().toLowerCase();
+const findService = (name) =>
+  state.services.find((sv) => norm(sv.name) === norm(name));
+const monthStatus = (key) => {
+  const cur = monthKey(new Date());
+  return key === cur ? "current" : key > cur ? "future" : "past";
+};
 function render() {
+  $("serviceOptions").innerHTML = state.services
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+    .map((sv) => `<option value="${sv.name}"></option>`)
+    .join("");
   const current = monthKey(new Date());
-  const isCurrentMonth = selectedMonth === current;
-  const isFutureMonth = selectedMonth > current;
-  syncServiceOptions();
   const launches = state.launches
     .filter((x) => monthKey(x.date) === selectedMonth)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -461,15 +568,19 @@ function render() {
   const cap = capAt(`${selectedMonth}-31`);
   const pct = cap ? (total / cap) * 100 : 0;
   const remaining = cap - total;
-  const qty = Number($("quantity").value) || 0;
-  const selectedService =
-    registerMode === "service" ? serviceAtId($("service").value) : null;
+  const qty =
+    registerMode === "nivel"
+      ? Number($("quantity").value) || 0
+      : Number($("quantityServico").value) || 0;
+  const matchedService =
+    registerMode === "servico" ? findService($("serviceInput").value) : null;
   const level =
-    registerMode === "service"
-      ? selectedService?.nivel || 1
-      : Number($("level").value);
-  const unit = rateAt(level, today());
-
+    registerMode === "nivel"
+      ? Number($("level").value)
+      : matchedService
+        ? matchedService.level
+        : 0;
+  const unit = level ? rateAt(level, today()) : 0;
   $("monthLabel").textContent = monthLabel(selectedMonth);
   $("accumulated").textContent = currency(total);
   $("progressText").textContent = `${currency(total)} / ${currency(cap)}`;
@@ -493,19 +604,6 @@ function render() {
         ? "Atingido"
         : `+ ${currency(Math.abs(remaining))}`;
   $("capNote").textContent = `Teto de referência: ${currency(cap)}`;
-
-  $("registerButton").disabled = !isCurrentMonth || !isReady();
-  $("previousMonth").disabled = selectedMonth <= monthKey("2020-01-01");
-  $("nextMonth").disabled = isFutureMonth || selectedMonth === current;
-  $("readOnlyHint").classList.toggle("hidden", isCurrentMonth);
-  $("periodStatus").textContent = isCurrentMonth
-    ? "MÊS ABERTO"
-    : isFutureMonth
-      ? "MÊS FUTURO · BLOQUEADO"
-      : "MÊS ENCERRADO · SOMENTE LEITURA";
-  $("periodStatus").className =
-    `period-status ${isCurrentMonth ? "open" : isFutureMonth ? "future" : "closed"}`;
-
   const totals = {};
   state.launches.forEach(
     (x) =>
@@ -517,28 +615,32 @@ function render() {
     ? monthLabel(best[0])
     : "Ainda sem lançamentos";
   $("previewText").textContent =
-    registerMode === "service"
-      ? selectedService
-        ? `${selectedService.nome} · Nível ${selectedService.nivel} × ${qty || 0}`
-        : "Selecione um serviço"
-      : `${LEVEL_NAMES[level]} × ${qty || 0}`;
+    registerMode === "nivel"
+      ? `${LEVEL_NAMES[level]} × ${qty || 0}`
+      : matchedService
+        ? `${matchedService.name} (${LEVEL_NAMES[level]}) × ${qty || 0}`
+        : $("serviceInput").value
+          ? "Serviço não encontrado"
+          : "Selecione um serviço";
   $("previewTotal").textContent = currency(qty * unit);
-  $("autoLevel").textContent =
-    registerMode === "service"
-      ? selectedService
-        ? `Nível ${selectedService.nivel} · ${currency(unit)} por unidade`
-        : "Selecione um serviço para consultar o nível"
-      : `${LEVEL_NAMES[level]} · ${currency(unit)} por unidade`;
-  $("serviceLevelDisplay").textContent = selectedService
-    ? `Nível ${selectedService.nivel}`
-    : "—";
+  const monthStat = monthStatus(selectedMonth);
+  const validEntry = registerMode === "nivel" ? !!level : !!matchedService;
+  $("registerButton").disabled =
+    monthStat !== "current" || !isReady() || !validEntry;
+  $("readOnlyHint").classList.toggle("hidden", monthStat === "current");
+  $("readOnlyHint").textContent =
+    monthStat === "future"
+      ? "◷ Mês futuro ainda não liberado para lançamentos."
+      : monthStat === "past"
+        ? "◷ Mês encerrado — consulta em modo de leitura."
+        : "";
   $("recordCount").textContent =
     `${String(launches.length).padStart(2, "0")} registros`;
   const last = state.launches
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date))[0];
   $("latestLaunch").innerHTML = last
-    ? `<div class="last-main"><div class="last-level">N${last.level}</div><div><strong>${last.serviceName || LEVEL_NAMES[last.level]}</strong><span>${last.serviceName ? `Nível ${last.level} · ` : ""}${last.quantity} unidade${last.quantity === 1 ? "" : "s"} · ${dateTime(last.date)}</span></div></div><div class="last-total">+ ${currency(last.total)}</div><button class="undo-button" id="undoButton">↶ Desfazer último lançamento</button>`
+    ? `<div class="last-main"><div class="last-level">N${last.level}</div><div><strong>${LEVEL_NAMES[last.level]}</strong><span>${last.quantity} unidade${last.quantity === 1 ? "" : "s"} · ${dateTime(last.date)}</span></div></div><div class="last-total">+ ${currency(last.total)}</div><button class="undo-button" id="undoButton">↶ Desfazer último lançamento</button>`
     : `<div class="empty-last"><div class="empty-icon">▱</div><strong>Nenhum lançamento ainda</strong><span>O próximo registro aparece aqui.</span></div>`;
   if ($("undoButton"))
     $("undoButton").onclick = () => {
@@ -546,7 +648,7 @@ function render() {
       notify("Último lançamento desfeito.");
     };
   $("historyContent").innerHTML = launches.length
-    ? `<div class="history-table-wrap"><table><thead><tr><th>DATA</th><th>SERVIÇO</th><th>NÍVEL</th><th>QTD.</th><th>UNITÁRIO</th><th class="right">TOTAL</th></tr></thead><tbody>${launches.map((x) => `<tr><td><b>${dateTime(x.date).split(",")[0]}</b><span>${dateTime(x.date).split(",")[1]}</span></td><td>${x.serviceName || "Lançamento por nível"}</td><td><i class="level-chip level-${x.level}">N${x.level}</i>${LEVEL_NAMES[x.level]}</td><td>${x.quantity}</td><td>${currency(x.unitValue)}</td><td class="right total-cell">${currency(x.total)}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="history-table-wrap"><table><thead><tr><th>DATA</th><th>NÍVEL</th><th>SERVIÇO</th><th>QTD.</th><th>UNITÁRIO</th><th class="right">TOTAL</th></tr></thead><tbody>${launches.map((x) => `<tr><td><b>${dateTime(x.date).split(",")[0]}</b><span>${dateTime(x.date).split(",")[1]}</span></td><td><i class="level-chip level-${x.level}">N${x.level}</i>${LEVEL_NAMES[x.level]}</td><td>${x.serviceName || "—"}</td><td>${x.quantity}</td><td>${currency(x.unitValue)}</td><td class="right total-cell">${currency(x.total)}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state"><div class="empty-icon">$</div><strong>Sem movimentação em ${monthLabel(selectedMonth).toLowerCase()}</strong><span>Registre a primeira entrega do período para iniciar o histórico.</span></div>`;
   const months = Array.from({ length: 6 }, (_, i) =>
     shiftMonth(selectedMonth, i - 5),
@@ -594,7 +696,7 @@ function renderSettings() {
           deleteDoc(doc(db, COL.rates, rate.id)).catch(fail);
         }),
     );
-  } else {
+  } else if (settingsTab === "cap") {
     body.innerHTML = `<div class="settings-form"><label>NOVO TETO<input id="newCapValue" class="number-input" placeholder="200,00"></label><label>INÍCIO DA VIGÊNCIA<input id="newCapDate" class="number-input" type="date" value="${today()}"></label><button id="saveCap" class="save-button">Adicionar vigência ＋</button></div><div class="settings-list"><b>TETOS CADASTRADOS</b>${state.caps
       .slice()
       .sort((a, b) => b.startDate.localeCompare(a.startDate))
@@ -617,6 +719,43 @@ function renderSettings() {
       $("newCapValue").value = "";
       notify("Nova vigência de teto criada.");
     };
+  } else {
+    const list = state.services
+      .filter((sv) => norm(sv.name).includes(norm(servicesFilter)))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    body.innerHTML = `<div class="settings-form"><label>NOME DO SERVIÇO<input id="newServiceName" class="number-input" placeholder="Nome do novo serviço"></label><label>NÍVEL<div class="select-wrap"><select id="newServiceLevel">${LEVELS.map((x) => `<option value="${x}">${LEVEL_NAMES[x]}</option>`).join("")}</select><span>⌄</span></div></label><button id="saveService" class="save-button">Adicionar serviço ＋</button></div><input id="serviceSearch" class="services-search" placeholder="Buscar serviço…" value="${servicesFilter}"><div class="services-count">${list.length} de ${state.services.length} serviços</div><div class="settings-list">${list.map((sv) => `<div class="service-row"><strong>${sv.name}</strong><select data-service-level="${sv.id}">${LEVELS.map((x) => `<option value="${x}" ${x === sv.level ? "selected" : ""}>${LEVEL_NAMES[x]}</option>`).join("")}</select></div>`).join("") || '<div class="empty-state"><strong>Nenhum serviço encontrado</strong></div>'}</div>`;
+    $("saveService").onclick = () => {
+      const name = $("newServiceName").value.trim();
+      if (!name) return notify("Informe o nome do serviço.", "error");
+      if (findService(name))
+        return notify("Já existe um serviço com esse nome.", "error");
+      addDoc(collection(db, COL.services), {
+        nome: name,
+        nivel: Number($("newServiceLevel").value),
+      }).catch(fail);
+      $("newServiceName").value = "";
+      notify("Serviço adicionado.");
+    };
+    $("serviceSearch").oninput = () => {
+      servicesFilter = $("serviceSearch").value;
+      renderSettings();
+      setTimeout(() => {
+        const el = $("serviceSearch");
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }, 0);
+    };
+    body.querySelectorAll("[data-service-level]").forEach(
+      (sel) =>
+        (sel.onchange = () => {
+          setDoc(
+            doc(db, COL.services, sel.dataset.serviceLevel),
+            { nivel: Number(sel.value) },
+            { merge: true },
+          ).catch(fail);
+          notify("Nível do serviço atualizado.");
+        }),
+    );
   }
 }
 $("previousMonth").onclick = () => {
@@ -624,73 +763,73 @@ $("previousMonth").onclick = () => {
   render();
 };
 $("nextMonth").onclick = () => {
-  if (selectedMonth < monthKey(new Date())) {
-    selectedMonth = shiftMonth(selectedMonth, 1);
-    render();
-  }
+  selectedMonth = shiftMonth(selectedMonth, 1);
+  render();
 };
 $("quantity").oninput = render;
 $("level").onchange = render;
-$("service").onchange = render;
-$("modeLevel").onclick = () => {
-  registerMode = "level";
-  $("modeLevel").classList.add("active");
-  $("modeService").classList.remove("active");
-  $("levelFields").classList.remove("hidden");
-  $("serviceFields").classList.add("hidden");
+$("quantityServico").oninput = render;
+$("serviceInput").oninput = render;
+$("modeNivelTab").onclick = () => {
+  registerMode = "nivel";
+  $("modeNivelTab").classList.add("active");
+  $("modeServicoTab").classList.remove("active");
+  $("nivelFields").classList.remove("hidden");
+  $("servicoFields").classList.add("hidden");
   render();
 };
-$("modeService").onclick = () => {
-  registerMode = "service";
-  $("modeService").classList.add("active");
-  $("modeLevel").classList.remove("active");
-  $("levelFields").classList.add("hidden");
-  $("serviceFields").classList.remove("hidden");
+$("modeServicoTab").onclick = () => {
+  registerMode = "servico";
+  $("modeServicoTab").classList.add("active");
+  $("modeNivelTab").classList.remove("active");
+  $("servicoFields").classList.remove("hidden");
+  $("nivelFields").classList.add("hidden");
   render();
 };
 $("registerButton").onclick = () => {
-  const quantity = Number($("quantity").value);
-  const current = monthKey(new Date());
-  if (selectedMonth !== current)
-    return notify("Este mês está bloqueado para novos lançamentos.", "error");
-  if (!isReady()) return notify("Aguarde a conexão com o Firebase.", "error");
-  if (!Number.isInteger(quantity) || quantity < 1)
-    return notify("Informe uma quantidade inteira maior que zero.", "error");
-  const selectedService =
-    registerMode === "service" ? serviceAtId($("service").value) : null;
+  const quantity =
+    registerMode === "nivel"
+      ? Number($("quantity").value)
+      : Number($("quantityServico").value);
+  const service =
+    registerMode === "servico" ? findService($("serviceInput").value) : null;
   const level =
-    registerMode === "service"
-      ? selectedService?.nivel || 0
-      : Number($("level").value);
-  const unit = rateAt(level, today());
-  if (registerMode === "service" && !selectedService)
-    return notify("Selecione um serviço válido.", "error");
+    registerMode === "nivel"
+      ? Number($("level").value)
+      : service
+        ? service.level
+        : 0;
+  const unit = level ? rateAt(level, today()) : 0;
+  if (monthStatus(selectedMonth) !== "current")
+    return notify("Volte ao mês atual para registrar.", "error");
+  if (!isReady()) return notify("Aguarde a conexão com o Firebase.", "error");
+  if (registerMode === "servico" && !service)
+    return notify("Selecione um serviço válido da lista.", "error");
   if (!unit)
     return notify("Não há valor vigente cadastrado para este nível.", "error");
-  const now = new Date();
+  if (!Number.isInteger(quantity) || quantity < 1)
+    return notify("Informe uma quantidade inteira maior que zero.", "error");
   const payload = {
-    data: now.toISOString(),
-    criado_em: serverTimestamp(),
-    periodo_ano: now.getFullYear(),
-    periodo_mes: now.getMonth() + 1,
+    data: new Date().toISOString(),
     nivel: level,
     quantidade: quantity,
     valor_unitario: unit,
     valor_total: quantity * unit,
   };
-  if (selectedService) {
-    payload.servico_id = selectedService.serviceId;
-    payload.servico_nome = selectedService.nome;
+  if (service) {
+    payload.servico_id = service.id;
+    payload.servico_nome = service.name;
   }
-  addDoc(collection(db, COL.launches), payload)
-    .then(() => {
-      $("quantity").value = 1;
-      notify(
-        `${selectedService ? selectedService.nome : LEVEL_NAMES[level]} · ${quantity} unidade${quantity === 1 ? "" : "s"} registrado.`,
-      );
-      render();
-    })
-    .catch(fail);
+  addDoc(collection(db, COL.launches), payload).catch(fail);
+  if (registerMode === "nivel") $("quantity").value = 1;
+  else {
+    $("quantityServico").value = 1;
+    $("serviceInput").value = "";
+  }
+  notify(
+    `${service ? service.name : LEVEL_NAMES[level]} · ${quantity} unidade${quantity === 1 ? "" : "s"} registrado.`,
+  );
+  render();
 };
 $("settingsButton").onclick = () => {
   $("settingsModal").classList.remove("hidden");
@@ -701,18 +840,21 @@ $("manageValues").onclick = () => {
   renderSettings();
 };
 $("closeSettings").onclick = () => $("settingsModal").classList.add("hidden");
-$("ratesTab").onclick = () => {
-  settingsTab = "rates";
-  $("ratesTab").classList.add("active");
-  $("capTab").classList.remove("active");
+const settingsTabs = {
+  rates: $("ratesTab"),
+  cap: $("capTab"),
+  services: $("servicesTab"),
+};
+const selectSettingsTab = (tab) => {
+  settingsTab = tab;
+  Object.entries(settingsTabs).forEach(([k, btn]) =>
+    btn.classList.toggle("active", k === tab),
+  );
   renderSettings();
 };
-$("capTab").onclick = () => {
-  settingsTab = "cap";
-  $("capTab").classList.add("active");
-  $("ratesTab").classList.remove("active");
-  renderSettings();
-};
+$("ratesTab").onclick = () => selectSettingsTab("rates");
+$("capTab").onclick = () => selectSettingsTab("cap");
+$("servicesTab").onclick = () => selectSettingsTab("services");
 render();
 
 /* ---------- Sincronização com o Firestore ---------- */
@@ -739,39 +881,37 @@ async function seed(key) {
   seeding[key] = true;
   try {
     if (key === "services") {
-      for (let i = 0; i < SERVICE_CATALOG.length; i += 450) {
+      for (let i = 0; i < SERVICES_SEED.length; i += 450) {
         const batch = writeBatch(db);
-        SERVICE_CATALOG.slice(i, i + 450).forEach((s) =>
-          batch.set(doc(db, COL.services, `service-${s.id}`), {
-            id: s.id,
-            nome: s.name,
-            nivel: s.level,
-            ativo: true,
+        SERVICES_SEED.slice(i, i + 450).forEach((sv) =>
+          batch.set(doc(db, COL.services, sv.id), {
+            nome: sv.name,
+            nivel: sv.level,
           }),
         );
         await batch.commit();
       }
-      return;
+    } else {
+      const batch = writeBatch(db),
+        d = initial();
+      if (key === "rates")
+        d.rates.forEach((r) =>
+          batch.set(doc(db, COL.rates, r.id), {
+            nivel: r.level,
+            valor: r.value,
+            inicio: r.startDate,
+          }),
+        );
+      else
+        d.caps.forEach((c) =>
+          batch.set(doc(db, COL.caps, c.id), {
+            tipo: CAP_TYPE,
+            valor: c.value,
+            inicio: c.startDate,
+          }),
+        );
+      await batch.commit();
     }
-    const batch = writeBatch(db),
-      d = initial();
-    if (key === "rates")
-      d.rates.forEach((r) =>
-        batch.set(doc(db, COL.rates, r.id), {
-          nivel: r.level,
-          valor: r.value,
-          inicio: r.startDate,
-        }),
-      );
-    else
-      d.caps.forEach((c) =>
-        batch.set(doc(db, COL.caps, c.id), {
-          tipo: CAP_TYPE,
-          valor: c.value,
-          inicio: c.startDate,
-        }),
-      );
-    await batch.commit();
   } catch (err) {
     console.warn("Seed ignorado (provavelmente já existe):", err);
   }

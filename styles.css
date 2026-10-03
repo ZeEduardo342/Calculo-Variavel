@@ -1000,76 +1000,68 @@ td span {
 .connection-pill.error i {
   background: #c96b5c;
 }
-
-.mode-switch {
+.mode-tabs {
   display: flex;
   gap: 4px;
   padding: 4px;
   background: #f0f0ea;
-  border: 1px solid #e5e5df;
   border-radius: 8px;
-  margin: -8px 0 18px;
+  margin-bottom: 18px;
 }
-.mode-switch button {
+.mode-tabs button {
   flex: 1;
   border: 0;
   border-radius: 6px;
-  padding: 9px 12px;
+  padding: 10px 13px;
   background: transparent;
   color: #7b8780;
-  font: 600 10px "DM Mono";
-  letter-spacing: 0.04em;
+  font: 600 11px "DM Mono";
 }
-.mode-switch button.active {
+.mode-tabs button.active {
   background: #fff;
   color: #253c40;
   box-shadow: 0 2px 8px #2436380d;
 }
-.auto-level {
-  margin-top: 10px;
-  color: #728079;
-  font: 500 10px "DM Mono";
-}
-.auto-level-inline {
-  margin-top: 9px;
-  min-height: 48px;
+.services-search {
+  width: 100%;
+  height: 44px;
   padding: 0 14px;
+  border: 1px solid #dcdfd9;
+  outline: 0;
+  background: #f5f4ef;
+  color: #24353b;
+  border-radius: 8px;
+  font: 500 13px "DM Sans";
+  margin-bottom: 14px;
+}
+.services-search:focus {
+  border-color: #9ebd3c;
+  box-shadow: 0 0 0 3px #b6d55420;
+}
+.service-row {
   display: flex;
   align-items: center;
+  gap: 11px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ecece7;
+}
+.service-row strong {
+  flex: 1;
+  color: #36484b;
+  font: 500 12px "DM Sans";
+  font-weight: 500;
+}
+.service-row select {
+  height: 36px;
+  padding: 0 10px;
   border: 1px solid #dcdfd9;
   background: #f5f4ef;
-  color: #53645f;
-  border-radius: 8px;
-  font: 600 12px "DM Mono";
-}
-.quantity-field {
-  display: block;
-  max-width: 230px;
-  margin-top: 14px;
-  color: #788480;
-  font: 500 10px "DM Mono";
-  letter-spacing: 0.1em;
-}
-.quantity-field .number-input {
-  display: block;
-}
-.period-status {
-  margin-top: 11px;
-  padding: 8px 10px;
+  color: #24353b;
   border-radius: 6px;
-  text-align: center;
-  font: 600 9px "DM Mono";
-  letter-spacing: 0.08em;
+  font: 600 11px "DM Mono";
 }
-.period-status.open {
-  color: #5d793e;
-  background: #e8f0db;
-}
-.period-status.closed {
-  color: #7d6f66;
-  background: #eee9e3;
-}
-.period-status.future {
-  color: #6c7480;
-  background: #e9ebef;
+.services-count {
+  color: #929b94;
+  font-size: 10px;
+  margin: -6px 0 14px;
 }
